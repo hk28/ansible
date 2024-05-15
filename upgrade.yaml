@@ -3,7 +3,8 @@
 
   become: true
   tasks:
-  - name: update apt packages
+  - name: 'apt: update & upgrade'
     apt:
       upgrade: yes
       update_cache: yes
+  - debug: msg={{ apt.stdout.split('\n')[:-1] }}
