@@ -7,4 +7,5 @@
     apt:
       upgrade: yes
       update_cache: yes
+    register: apt
   - debug: msg={{ apt.stdout.split('\n')[:-1] }}
