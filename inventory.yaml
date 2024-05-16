@@ -1,0 +1,11 @@
+---
+ungrouped:
+  hosts:
+    gnome:
+      ansible_host: 192.168.68.125
+    debianvm:
+      ansible_host: 192.168.68.118
+    dockerhost:
+      ansible_host: 192.168.68.124
+
+
