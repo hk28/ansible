@@ -1,8 +1,8 @@
 ---
 ungrouped:
   hosts:
-    gnome:
-      ansible_host: 100.66.12.83
+#    gnome:
+#      ansible_host: 100.66.12.83
     debianvm:
       ansible_host: 100.114.141.109
 #    debianvm_backup:
