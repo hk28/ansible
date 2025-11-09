@@ -5,8 +5,8 @@ ungrouped:
 #      ansible_host: 100.66.12.83
     debianvm:
       ansible_host: 100.114.141.109
-#    debianvm_backup:
-#      ansible_host: 100.116.98.57
+    debianvm_backup:
+      ansible_host: 100.116.98.57
     dockerhost:
       ansible_host: 192.168.68.124
       ansible_user: spock
