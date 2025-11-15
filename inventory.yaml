@@ -1,8 +1,8 @@
 ---
 ungrouped:
   hosts:
-    wyse001:
-      ansible_host: 192.168.68.125
+    #wyse001:
+    #  ansible_host: 192.168.68.125
     debianvm:
       ansible_host: 100.114.141.109
     debianvm_backup:
