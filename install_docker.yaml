@@ -1,0 +1,89 @@
+---
+- name: Fakten sammeln und dann Docker installieren
+  hosts: test # Ihre Host-Gruppe
+  become: true
+  gather_facts: false # <-- HIER wird die automatische Sammlung deaktiviert
+
+  tasks:
+    - name: 🔍 Host-Fakten mit ansible.builtin.setup sammeln
+      # Dieses Modul sammelt alle Fakten und macht sie als 'ansible_*' Variablen verfügbar
+      ansible.builtin.setup: ~ 
+      # Die Tilde (~) ist eine Abkürzung für einen leeren Hash und ist optional,
+      # aber es ist eine gängige Konvention, wenn keine Argumente übergeben werden.
+
+    - name: 🐳 Beispiel-Task, der Fakten verwendet
+      ansible.builtin.debug:
+        msg: "Die Host-Architektur ist {{ ansible_architecture }} und das OS ist {{ ansible_distribution }}."
+
+- name: Docker Community Edition (CE) auf Debian installieren
+  hosts: test # Ersetze dies durch deine Host-Gruppe
+  become: true # Benötigt Root-Rechte für die Installation
+  gather_facts: true
+
+  vars:
+    # Setzt den Release-Namen basierend auf den Fakten, z.B. bullseye oder bookworm
+    # Wir verwenden die Ansible Fakten für Flexibilität
+    debian_release: "{{ ansible_distribution_release }}"
+    ansible_architecture: "{{ ansible_architecture }}"
+    # Der Benutzer, der später ohne sudo Docker-Befehle ausführen soll
+    target_user: "{{ ansible_user }}"
+    # Berechnung der Docker-kompatiblen Architektur (z.B. x86_64 -> amd64)
+    docker_arch: "{{ ansible_architecture | replace('x86_64', 'amd64') }}"
+
+  tasks:
+    - name: 📦 Installiere notwendige Pakete für APT-Repo und TLS
+      ansible.builtin.apt:
+        name: 
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
+
+    - name: 🔑 Erstelle das Keyring-Verzeichnis für den Docker GPG-Schlüssel
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: 🗝️ Füge den offiziellen Docker GPG-Schlüssel hinzu
+      ansible.builtin.shell: |
+        curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        chmod a+r /etc/apt/keyrings/docker.gpg
+      args:
+        # Führt diesen Task nur aus, wenn die Datei noch nicht existiert
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: 📜 Füge das offizielle Docker APT-Repository hinzu
+      ansible.builtin.apt_repository:
+        #repo: deb [arch={{ docker_arch }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian {{ debian_release }} stable
+        repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]  https://download.docker.com/{{ ansible_system | lower }}/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable
+        state: present
+        filename: docker
+
+    - name: 🐳 Installiere Docker Engine, CLI und Containerd
+      ansible.builtin.apt:
+        name: 
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: latest
+        update_cache: yes
+
+    - name: 👥 Füge den Benutzer ({{ target_user }}) zur 'docker' Gruppe hinzu
+      ansible.builtin.user:
+        name: "{{ target_user }}"
+        groups: docker
+        append: yes
+      notify: "Neustart des Docker-Dienstes"
+      # Hinzufügen des Benutzers zur Gruppe benötigt normalerweise ein erneutes Login,
+      # aber der Dienst-Neustart (Handler) wird hier für einen sauberen Start ausgelöst.
+
+  handlers:
+    - name: Neustart des Docker-Dienstes
+      ansible.builtin.service:
+        name: docker
+        state: restarted

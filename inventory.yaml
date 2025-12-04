@@ -1,9 +1,9 @@
 ---
 ungrouped:
   hosts:
-    #wyse002:
-      #ansible_host: 192.168.68.125
-      #ansible_user: spock
+    wyse002:
+      ansible_host: 192.168.68.125
+      ansible_user: spock
     debianvm:
       ansible_host: 100.114.141.109
     debianvm_backup:
@@ -12,5 +12,10 @@ ungrouped:
       ansible_host: 192.168.68.124
       ansible_user: spock
 
+test:
+  hosts:
+    wyse002:
+      ansible_host: 192.168.68.125
+      ansible_user: spock
 
 

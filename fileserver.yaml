@@ -1,0 +1,48 @@
+---
+- name: SMB-Freigabe mounten und Mount-Verzeichnis erstellen
+  hosts: test # Ersetze dies durch deine Host-Gruppe
+  become: true # Benötigt Root-Rechte für die Installation und das Mounten
+
+  vars:
+    mount_point: "/mnt/fileserver" # Das gewünschte Mount-Verzeichnis
+    smb_source: "//192.168.68.119/usb_share" # Die SMB-Quelladresse (z.B. //192.168.1.10/data)
+    credential_file_path: "/home/spock/.smbcredentials" # Pfad zur Credentials-Datei auf dem Server
+
+  tasks:
+    - name: 📦 Sicherstellen, dass die 'cifs-utils' installiert sind
+      ansible.builtin.apt:
+        name: cifs-utils
+        state: present
+        update_cache: yes
+
+    - name: 📂 Mount-Verzeichnis erstellen
+      ansible.builtin.file:
+        path: "{{ mount_point }}"
+        state: directory
+        mode: '0755'
+        owner: spock
+        group: spock
+
+    - name: 🔐 Credentials-Datei auf den Server kopieren (falls noch nicht vorhanden)
+      # Hier solltest du sicherstellen, dass die Datei auf deiner Ansible-Steuerungsmaschine liegt
+      ansible.builtin.copy:
+        src: .smbcredentials # Name der Datei in deinem lokalen Playbook-Verzeichnis
+        dest: "{{ credential_file_path }}"
+        owner: spock
+        group: spock
+        mode: '0600' # Wichtig: Nur Root sollte diese Datei lesen können!
+
+    - name: 📝 Eintrag in /etc/fstab erstellen
+      ansible.builtin.mount:
+        path: "{{ mount_point }}"
+        src: "{{ smb_source }}"
+        fstype: cifs
+        opts: "credentials={{ credential_file_path }},vers=3.0,iocharset=utf8,_netdev,uid=1000,gid=1000"
+        state: present
+
+    - name: 🔄 Mount-Punkt aktivieren (Mounten ohne Neustart)
+      ansible.builtin.command: mount "{{ mount_point }}"
+      args:
+        creates: "{{ mount_point }}/.ansible_mount_check" # Nur ausführen, wenn noch nicht gemountet
+      changed_when: true
+      ignore_errors: true # Der Mount-Befehl kann fehlschlagen, wenn bereits gemountet
