@@ -1,0 +1,36 @@
+---
+- name: Google Chrome (Stable) auf Debian installieren
+  hosts: test # Ersetze dies durch deine Host-Gruppe
+  become: true # Benötigt Root-Rechte
+
+  tasks:
+    - name: 📦 Installiere benötigte Pakete
+      ansible.builtin.apt:
+        name: 
+          - curl
+          - apt-transport-https
+        state: present
+        update_cache: yes
+
+    - name: 🗝️ Lade und füge den Google Linux Signing Key (GPG) hinzu
+      # Wir verwenden das offizielle curl-Kommando, um den Key sicher in das Keyrings-Verzeichnis zu speichern
+      ansible.builtin.shell: |
+        curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg
+        chmod a+r /etc/apt/keyrings/google-chrome.gpg
+      args:
+        creates: /etc/apt/keyrings/google-chrome.gpg
+      # HINWEIS: Es wird davon ausgegangen, dass das Verzeichnis /etc/apt/keyrings/ bereits existiert
+      # (was es sollte, da es für Docker erstellt wurde).
+
+    - name: 📜 Füge das Google Chrome APT-Repository hinzu
+      ansible.builtin.apt_repository:
+        # Hier wird das Repository mit der korrekten Signaturreferenz hinzugefügt
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main"
+        state: present
+        filename: google-chrome
+
+    - name: 🌐 Installiere Google Chrome Stable
+      ansible.builtin.apt:
+        name: google-chrome-stable
+        state: latest
+        update_cache: yes

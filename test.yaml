@@ -1,0 +1,14 @@
+---
+- name: ANSIBLE TEST
+  hosts: test # Ersetze dies durch deine Host-Gruppe
+  become: true # Benötigt Root-Rechte für die Installation
+  gather_facts: true
+
+  tasks:
+    - name: 📦 curl install test
+      ansible.builtin.apt:
+        name: 
+          - curl
+        state: present
+        update_cache: yes
+

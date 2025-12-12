@@ -1,0 +1,55 @@
+---
+- name: Chrome Remote Desktop und XFCE-Desktop auf Debian installieren
+  hosts: test
+  become: true
+  gather_facts: true
+
+  vars:
+    # Setzt den Benutzernamen, der später die Remotedesktop-Sitzung startet
+    target_user: "{{ ansible_user }}"
+    # XFCE ist eine ressourcenschonende Desktop-Umgebung
+    desktop_environment_packages:
+      - xfce4
+      - xfce4-goodies
+      - task-xfce-desktop # Optional, für vollständige Abhängigkeiten
+      - dbus-x11 # Wichtig für Remotedesktop
+
+  tasks:
+    - name: 📦 Installiere XFCE Desktop-Umgebung und notwendige X-Pakete (falls nicht vorhanden)
+      ansible.builtin.apt:
+        name: "{{ desktop_environment_packages }}"
+        state: present
+        update_cache: yes
+      environment:
+        # Unterdrückt interaktive Eingabeaufforderungen während der Desktop-Installation
+        DEBIAN_FRONTEND: noninteractive 
+
+    - name: ⬇️ Lade Chrome Remote Desktop DEB-Paket mit wget herunter (Workaround)
+      ansible.builtin.shell: |
+        # Verwendet wget zum Herunterladen, was die Python-Abhängigkeit umgeht
+        wget -q -O /tmp/chrome-remote-desktop.deb https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
+      args:
+        # Führt diesen Task nur aus, wenn die Datei noch nicht existiert
+        creates: /tmp/chrome-remote-desktop.deb
+
+    - name: 💻 Installiere Chrome Remote Desktop über DEB-Datei
+      ansible.builtin.apt:
+        deb: /tmp/chrome-remote-desktop.deb
+        state: present
+      # Dies nutzt das zuvor hinzugefügte Google-Repository (für Chrome)
+
+    - name: ⚙️ Erstelle die Chrome Remote Desktop Sitzungsdatei
+      # Definiert, welche Desktop-Umgebung (hier XFCE) gestartet werden soll.
+      ansible.builtin.copy:
+        content: "exec /etc/X11/Xsession /usr/bin/startxfce4"
+        dest: "/etc/chrome-remote-desktop-session"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: 👥 Füge den Zielbenutzer zur Gruppe 'chrome-remote-desktop' hinzu
+      # Dies ist erforderlich, damit der Benutzer den Dienst starten kann
+      ansible.builtin.user:
+        name: "{{ target_user }}"
+        groups: chrome-remote-desktop
+        append: yes
